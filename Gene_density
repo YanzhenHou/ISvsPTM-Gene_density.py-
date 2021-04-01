@@ -1,0 +1,117 @@
+import sys
+
+chr2Tss = {}
+
+# open PTM 
+for line in open(sys.argv[3]):
+	lines = line.rstrip('\n').split('\t')
+	TSSs = int(lines[1])
+	Ends = int(lines[2])
+	chrid = lines[0]
+	chr2Tss.setdefault(chrid,[]).append((TSSs,Ends))
+# 结果是将PTM 弄成了 一个字典 染色体ID是字典 值是列表= 许多PTM的 start 和 end
+
+
+
+
+
+
+def count_gene_number(start,geneposs,upstream):
+	start_range = (start - upstream, start + upstream)
+	gene_count = 0
+	for genepos in geneposs:
+		#if start_range[0] <= genepos[0] and start_range[1] >= genepos[1]:
+		if start_range[0] <= genepos[0] <= start_range[1] or start_range[0] <= genepos[1] <= start_range[1]:
+			gene_count += 1
+	
+	return gene_count
+# 此函数用于计算 每一个integration site附近 PTM的数目，计算方法是 只要PTM的 头或者 尾  在那个围绕 integration附近的范围内 即可
+所以结果是 
+IS 0
+IS 1
+IS 2
+IS 3
+IS 3
+IS 3
+IS 4
+IS 5
+这里的geneposs是指 比如 chr2Tss[chr8] 某一个染色体上的许多PTM 所以需要遍历
+固定一个integration 找周围的PTM
+
+
+gene_inbody_rates = [] ; labels = []; x = [0]
+filenamesssss = open(sys.argv[1]).readlines()
+genenumbers = range(0,91)
+distance = float(sys.argv[2])
+# 有多种 integrtaion 的文件 比如 WT 和 LKO
+for i in range(len(filenamesssss)):
+	if filenamesssss[i][0] == "#":
+		continue
+	genenumber2sitenumber = {}
+	filenames = filenamesssss[i].split()
+	filename = filenames[0]
+	label = " ".join(filenames[1:])
+	labels.append(label)
+	#print (filenames)
+	gene_inbody = 0 ; gene_inbody_not = 0
+  
+  # 针对一个integration文件 读取文件
+	for line in open(filename):
+		lines = line.split()
+		start = int(lines[1])
+		if lines[5] == "-":
+			start = int(lines[2])
+		chrid = lines[0]
+		gene_number = 0
+    
+    
+    # 和PTM 进行连接 必须要在 同一个染色体上面才有意义啊
+		if chrid in chr2Tss:
+			gene_number  = count_gene_number(start,chr2Tss[chrid],distance)
+      # 到这里 对一个integration 文件中的每一行 或者说 每一个integraion site 进行了计算 看看周围几个PTM
+      
+      # 因为有的integration 周围的PTM数目可以是一样的嘛 所以 要进行统计看看
+      
+			if gene_number in genenumber2sitenumber:
+				genenumber2sitenumber[gene_number] += 1
+			else:
+				genenumber2sitenumber[gene_number] = 1
+      # 于是乎 产生了这样的东东
+      # # genenumber2sitenumber = {0: 32467, 5: 1494, 1: 3607, 2: 3156, 3: 2747, 4: 2125, 7: 251, 6: 694, 8: 44, 9: 4}
+      # 意思是说 integration 周围有0个PTM的integration 数目有 32467  他们也许不是连续的 
+      # 比如说 有的Integration 附近可以是 6 个 8 个 10个 PTM
+      # 这样子看起来不美观嘛  所以 统一起来
+      
+	# 到这里 还是针对一个integration 文件的处理
+  # 首先需要产生一个 连续的数目 0 1 2 3 4 5 6 7 ，，90
+  # 然后  比如说 6在这里面了 就把它对应的 integration 数目打印出来
+  # 如果不在连续的数目中 说明没有啊 所以自然是0
+	for i in genenumbers:
+		if i in genenumber2sitenumber:
+			print (label,i,genenumber2sitenumber[i],distance)
+		else:
+			print (label,i,0,distance)
+
+
+# 最终产生了 这样的文件 PTMvsIss.dis.9000
+LKO 0 27594 9000.0
+LKO 1 2655 9000.0
+LKO 2 2207 9000.0
+LKO 3 1906 9000.0
+LKO 4 2021 9000.0
+LKO 5 1737 9000.0
+LKO 6 1473 9000.0
+LKO 7 1322 9000.0
+LKO 8 1304 9000.0
+LKO 9 1111 9000.0
+# 含义是
+所有integration中 27594 个integration 周围是没有PTM的
+2655个 integration 周围只有 1 个PTM
+2207个 integration 周围只有 2 个PTM
+1111个 integration 周围只有 9 个PTM
+
+然而
+       
+我们关心的不是 integrtaion 周围有几个 PTM 数目多少  
+我们只关心 integrtaion 周围 有 or  没有 PTM 换句话说  yes  or  no
+所以 只关心 0  的比率 用1减去 便是  有的几率
