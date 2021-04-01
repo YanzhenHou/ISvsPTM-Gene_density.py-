@@ -1,0 +1,21 @@
+python3 Integration_plot_onePTMoneColor_mod.py filename-filter 
+ 
+data = open(sys.argv[1])
+
+label2ratios = {}
+
+for filename in data:
+        filename = filename.rstrip("\n")
+
+        legend = filename.split('.')[0]
+        for line in open(filename):
+                lines = line.split()
+                #legend1 = legend +  "-" + lines[0]
+                legend1 = legend.split('.')[0]
+                #print (legend)
+                ratio = 1-float(lines[2])
+                if int(lines[-1]) > 5000:
+                    continue
+
+                label2ratios.setdefault(legend1,[]).append(ratio)
+
